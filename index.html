@@ -101,9 +101,11 @@
       padding: 8px 12px;
       border-radius: 10px;
       font-size: 0.85rem;
-      line-height: 1.4;
+      line-height: 1.5;
       word-break: break-word;
       background: var(--bg-bubble);
+      /* 空白行・改行をそのまま維持して表示 */
+      white-space: pre-wrap;
     }
     .chat-msg.user .bubble { background: var(--bg-user); color: #fff; }
 
@@ -304,13 +306,14 @@
           let author = "マル", avatar = "マ", text = "", trigger = "", image = "", options = "";
 
           r.c.forEach((cell, idx) => {
-            const val = cell && cell.v !== null && cell.v !== undefined ? String(cell.v).trim() : "";
-            if (idx === 0 && val) author = val;
-            if (idx === 1 && val) avatar = val;
-            if (idx === 2) text = val;
-            if (idx === 3) trigger = val;
-            if (idx === 4) image = fixImageUrl(val);
-            if (idx === 5) options = val;
+            // text列（idx === 2）は改行や空行を消去しないようそのまま保持
+            const val = cell && cell.v !== null && cell.v !== undefined ? String(cell.v) : "";
+            if (idx === 0 && val.trim()) author = val.trim();
+            if (idx === 1 && val.trim()) avatar = val.trim();
+            if (idx === 2) text = val; // 改行・空行を維持
+            if (idx === 3) trigger = val.trim();
+            if (idx === 4) image = fixImageUrl(val.trim());
+            if (idx === 5) options = val.trim();
           });
 
           const rowData = { author, avatar, text, trigger, image, options };
@@ -387,23 +390,19 @@
       }
 
       if (matchedRule) {
-        // 「返信中…」を表示
         const typingEl = showTypingIndicator(matchedRule.author, matchedRule.avatar);
 
         setTimeout(() => {
-          // 「返信中…」を削除
           if (typingEl && typingEl.parentNode) {
             typingEl.parentNode.removeChild(typingEl);
           }
 
-          // 本文を表示
           addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.image);
           if (matchedRule.options) setOptions(matchedRule.options);
         }, 3000);
       }
     }
 
-    // 「返信中…」バブルを表示する関数
     function showTypingIndicator(author, avatarText) {
       const box = document.getElementById('chat-box');
       const div = document.createElement('div');
@@ -446,10 +445,7 @@
           ${!isUser ? `<div class="avatar">${esc(avatarText)}</div>` : ''}
           <div class="msg-body">
             <div class="msg-author">${esc(author)}</div>
-            <div class="bubble">
-              ${esc(text)}
-              ${imgTag}
-            </div>
+            <div class="bubble">${esc(text)}${imgTag}</div>
           </div>
         </div>
       `;
@@ -485,6 +481,7 @@
       document.getElementById('img-modal').classList.remove('active');
     }
 
+    // 改行コード（\n）を保持したまま特殊文字のみエスケープ
     function esc(s) {
       return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
     }
