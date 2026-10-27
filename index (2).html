@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>S.I.D. - Interactive Chat Console</title>
+  <style>
+    :root {
+      --bg-dark: #0a0d14;
+      --bg-card: #121824;
+      --bg-bubble: #1a2336;
+      --bg-user: #103b66;
+      --cyan: #00f0ff;
+      --red: #ff3366;
+      --gold: #ffb700;
+      --text: #e1e7ed;
+      --muted: #64748b;
+      --border: rgba(0, 240, 255, 0.15);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+    body, html { width: 100%; height: 100%; background: var(--bg-dark); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+    
+    #app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
+      max-width: 500px;
+      margin: 0 auto;
+      background: #07090e;
+      position: relative;
+    }
+
+    header {
+      height: 50px;
+      background: rgba(18,24,36,0.95);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .org-title { font-size: 0.85rem; font-weight: bold; color: var(--cyan); display: flex; align-items: center; gap: 6px; }
+    .org-badge { font-size: 0.65rem; background: rgba(255,51,102,0.2); border: 1px solid var(--red); color: var(--red); padding: 2px 6px; border-radius: 4px; }
+
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .chat-msg { display: flex; gap: 8px; max-width: 85%; }
+    .chat-msg.sys { max-width: 100%; justify-content: center; }
+    .sys-banner { background: rgba(0,240,255,0.05); border: 1px dashed var(--border); padding: 6px 12px; border-radius: 4px; font-size: 0.75rem; color: var(--cyan); text-align: center; line-height: 1.4; }
+    .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #2a364f;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      color: var(--gold);
+    }
+
+    .msg-body { display: flex; flex-direction: column; max-width: 100%; }
+    .msg-author { font-size: 0.65rem; color: var(--muted); margin-bottom: 2px; }
+    .chat-msg.user .msg-author { text-align: right; }
+
+    .bubble {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      word-break: break-word;
+      background: var(--bg-bubble);
+    }
+    .chat-msg.user .bubble { background: var(--bg-user); color: #fff; }
+
+    .msg-image {
+      margin-top: 6px;
+      max-width: 220px;
+      max-height: 200px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      object-fit: cover;
+      cursor: pointer;
+      display: block;
+    }
+
+    .options-bar {
+      padding: 8px 10px;
+      background: rgba(18,24,36,0.9);
+      border-top: 1px dashed rgba(0,240,255,0.2);
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      flex-shrink: 0;
+      scrollbar-width: none;
+    }
+    .options-bar::-webkit-scrollbar { display: none; }
+    .options-bar:empty { display: none; }
+
+    .option-btn {
+      background: rgba(0,240,255,0.15);
+      border: 1px solid var(--cyan);
+      color: var(--cyan);
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .option-btn:hover { background: var(--cyan); color: #000; }
+
+    .chat-input-area {
+      padding: 8px;
+      background: rgba(18,24,36,0.95);
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    
+    .chat-input-area input[type="text"] {
+      flex: 1;
+      background: #0a0d14;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 8px 14px;
+      color: #fff;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .file-attach-btn {
+      background: none;
+      border: none;
+      color: var(--cyan);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .chat-input-area button.send-btn {
+      background: var(--cyan);
+      color: #000;
+      border: none;
+      border-radius: 16px;
+      padding: 8px 14px;
+      font-weight: bold;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .img-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .img-modal.active { display: flex; }
+    .img-modal img { max-width: 90%; max-height: 90%; border-radius: 8px; border: 1px solid var(--cyan); }
+  </style>
+</head>
+<body>
+
+  <div id="app">
+    <header>
+      <div class="org-title">⚡ S.I.D. CONSOLE</div>
+      <div class="org-badge">機密 LEVEL 3</div>
+    </header>
+
+    <div class="chat-container" id="chat-box">
+      <div class="chat-msg sys">
+        <div class="sys-banner" id="status-banner">暗号化通信チャネル #04 接続中...</div>
+      </div>
+    </div>
+
+    <!-- 返信選択肢エリア -->
+    <div class="options-bar" id="options-bar"></div>
+
+    <div class="chat-input-area">
+      <label class="file-attach-btn" title="画像を添付">
+        📷
+        <input type="file" id="user-file-input" accept="image/*" style="display:none;" onchange="handleUserImage(event)">
+      </label>
+      <input type="text" id="chat-input" placeholder="指示を入力..." onkeypress="if(event.key==='Enter')sendMsg()">
+      <button class="send-btn" onclick="sendMsg()">送信</button>
+    </div>
+  </div>
+
+  <div class="img-modal" id="img-modal" onclick="closeImgModal()">
+    <img id="img-modal-target" src="" alt="拡大画像">
+  </div>
+
+  <script>
+    // ★【ここにスプレッドシートのIDを入れてください】★
+    const SHEET_ID = "1v8qLtwIIqpS0tk7oTAaZ0tEJ-QGAza0l2ihEtqr3eno";
+    const SHEET_NAME = "chat";
+
+    let autoReplies = [];
+
+    function fixImageUrl(url) {
+      if (!url) return "";
+      let u = String(url).trim();
+      if (u.includes("dropbox.com")) {
+        u = u.replace(/\?dl=0$/, "").replace(/\?dl=1$/, "");
+        u = u + (u.includes("?") ? "&raw=1" : "?raw=1");
+      }
+      return u;
+    }
+
+    function normalizeStr(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/[Ａ-Ｚａ-ｚ０-９]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0))
+        .toLowerCase()
+        .replace(/\s+/g, '');
+    }
+
+    function updateBanner(text, isError = false) {
+      const banner = document.getElementById('status-banner');
+      if (banner) {
+        banner.innerText = text;
+        banner.style.color = isError ? 'var(--red)' : 'var(--cyan)';
+        banner.style.borderColor = isError ? 'var(--red)' : 'var(--border)';
+      }
+    }
+
+    // Googleスプレッドシートからの直接JSONPコールバック
+    window.googleSheetCallback = function(json) {
+      try {
+        if (!json || !json.table || !json.table.rows) {
+          updateBanner("⚠️ データの解析に失敗しました", true);
+          return;
+        }
+
+        const rows = json.table.rows;
+        const initialLogs = [];
+        autoReplies = [];
+
+        rows.forEach(r => {
+          let author = "マル", avatar = "マ", text = "", trigger = "", image = "", options = "";
+
+          r.c.forEach((cell, idx) => {
+            const val = cell && cell.v !== null && cell.v !== undefined ? String(cell.v).trim() : "";
+            if (idx === 0 && val) author = val;
+            if (idx === 1 && val) avatar = val;
+            if (idx === 2) text = val;
+            if (idx === 3) trigger = val;
+            if (idx === 4) image = fixImageUrl(val);
+            if (idx === 5) options = val;
+          });
+
+          const rowData = { author, avatar, text, trigger, image, options };
+          if (!trigger) {
+            initialLogs.push(rowData);
+          } else {
+            autoReplies.push(rowData);
+          }
+        });
+
+        updateBanner(`接続完了 (${autoReplies.length}件のルール読込済)`);
+        renderInitialLogs(initialLogs);
+
+      } catch (err) {
+        console.error(err);
+        updateBanner("⚠️ データ読み込みエラー", true);
+      }
+    };
+
+    function loadGoogleSheet() {
+      const script = document.createElement('script');
+      script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:googleSheetCallback&sheet=${encodeURIComponent(SHEET_NAME)}&_=${new Date().getTime()}`;
+      script.onerror = function() {
+        updateBanner("⚠️ スプレッドシートへのアクセスに失敗しました", true);
+      };
+      document.body.appendChild(script);
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadGoogleSheet();
+    });
+
+    function renderInitialLogs(logs) {
+      let lastOptions = "";
+      logs.forEach(msg => {
+        if (msg.text || msg.image) {
+          addMessageUI(msg.author, msg.avatar, msg.text, 'other', msg.image);
+        }
+        if (msg.options) lastOptions = msg.options;
+      });
+      if (lastOptions) setOptions(lastOptions);
+    }
+
+    function sendMsg(customText = null) {
+      const input = document.getElementById('chat-input');
+      const text = customText !== null ? customText : input.value.trim();
+      if (!text) return;
+
+      addMessageUI('あなた', 'YOU', text, 'user');
+      input.value = '';
+      clearOptions();
+
+      const normInput = normalizeStr(text);
+
+      setTimeout(() => {
+        let matchedRule = null;
+
+        for (const rule of autoReplies) {
+          if (rule.trigger) {
+            const normTrigger = normalizeStr(rule.trigger);
+            if (normTrigger !== "" && normInput.includes(normTrigger)) {
+              matchedRule = rule;
+              break;
+            }
+          }
+        }
+
+        if (matchedRule) {
+          addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.image);
+          if (matchedRule.options) setOptions(matchedRule.options);
+        } else {
+          addMessageUI('マル', 'マ', '了解！その手がかりについてさらに調べてみるね！', 'other');
+        }
+      }, 400);
+    }
+
+    function handleUserImage(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        addMessageUI('あなた', 'YOU', '画像を送信しました', 'user', event.target.result);
+        setTimeout(() => {
+          addMessageUI('マル', 'マ', '画像を受け取ったよ！詳しく解析してみるね。', 'other');
+          setOptions('解析結果は？, 他の場所を調べる');
+        }, 500);
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+    }
+
+    function addMessageUI(author, avatarText, text, type, imageUrl = '') {
+      const box = document.getElementById('chat-box');
+      const isUser = type === 'user';
+      const imgTag = imageUrl ? `<img src="${esc(imageUrl)}" class="msg-image" onclick="openImgModal('${esc(imageUrl)}')">` : '';
+
+      const html = `
+        <div class="chat-msg ${isUser ? 'user' : ''}">
+          ${!isUser ? `<div class="avatar">${esc(avatarText)}</div>` : ''}
+          <div class="msg-body">
+            <div class="msg-author">${esc(author)}</div>
+            <div class="bubble">
+              ${esc(text)}
+              ${imgTag}
+            </div>
+          </div>
+        </div>
+      `;
+      box.insertAdjacentHTML('beforeend', html);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function setOptions(optionsStr) {
+      const bar = document.getElementById('options-bar');
+      bar.innerHTML = '';
+      if (!optionsStr) return;
+
+      const opts = optionsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      opts.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => sendMsg(opt);
+        bar.appendChild(btn);
+      });
+    }
+
+    function clearOptions() {
+      document.getElementById('options-bar').innerHTML = '';
+    }
+
+    function openImgModal(src) {
+      const modal = document.getElementById('img-modal');
+      document.getElementById('img-modal-target').src = src;
+      modal.classList.add('active');
+    }
+    function closeImgModal() {
+      document.getElementById('img-modal').classList.remove('active');
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+    }
+  </script>
+</body>
+</html>
