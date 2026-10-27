@@ -138,18 +138,15 @@
       100% { opacity: .2; }
     }
 
-    /* 複数画像用のグリッドコンテナ */
     .msg-images-grid {
       display: grid;
       grid-gap: 6px;
       margin-top: 6px;
     }
-    /* 1枚のとき */
     .msg-images-grid.count-1 {
       grid-template-columns: 1fr;
       max-width: 220px;
     }
-    /* 2枚以上のとき（2列並び） */
     .msg-images-grid.count-multi {
       grid-template-columns: repeat(2, 1fr);
       max-width: 260px;
@@ -165,7 +162,6 @@
       display: block;
       background: #0f141f;
     }
-    /* 1枚だけの時は大きめに表示 */
     .msg-images-grid.count-1 .msg-image {
       height: auto;
       max-height: 200px;
@@ -313,7 +309,6 @@
     let isProcessing = false;
     let hasActiveOptions = false;
 
-    // 単体または複数カンマ区切りのURLを整形
     function parseImageUrls(rawStr) {
       if (!rawStr) return [];
       const parts = String(rawStr).split(/[,、\n]/).map(s => s.trim()).filter(s => s.length > 0);
@@ -387,7 +382,7 @@
             if (idx === 1 && val.trim()) avatar = val.trim();
             if (idx === 2) text = val;
             if (idx === 3) trigger = val.trim();
-            if (idx === 4) images = parseImageUrls(val); // 複数URLをパース
+            if (idx === 4) images = parseImageUrls(val);
             if (idx === 5) options = val.trim();
           });
 
@@ -476,12 +471,12 @@
 
         const typingEl = showTypingIndicator(matchedRule.author, matchedRule.avatar);
 
+        // 返信待ち時間を1秒（1000ms）に変更
         setTimeout(async () => {
           if (typingEl && typingEl.parentNode) {
             typingEl.parentNode.removeChild(typingEl);
           }
 
-          // すべての画像がロード完了するまで待機
           await addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.images);
 
           if (matchedRule.options) {
@@ -492,7 +487,7 @@
 
           isProcessing = false;
           updateInputState();
-        }, 3000);
+        }, 1000);
       } else {
         updateInputState();
       }
@@ -531,7 +526,6 @@
       e.target.value = '';
     }
 
-    // 複数画像対応のメッセージ描画処理（全画像の完了をPromise.allで待機）
     function addMessageUI(author, avatarText, text, type, imageUrls = []) {
       return new Promise((resolve) => {
         const box = document.getElementById('chat-box');
