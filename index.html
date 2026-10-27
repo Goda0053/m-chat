@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>S.I.D. - Interactive Chat Console</title>
   <style>
     :root {
@@ -17,14 +17,33 @@
       --muted: #64748b;
       --border: rgba(0, 240, 255, 0.15);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
-    body, html { width: 100%; height: 100%; background: var(--bg-dark); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      -webkit-tap-highlight-color: transparent; 
+    }
+    
+    /* スマホのアドレスバー・キーボード表示によるズレを完全に防ぐ */
+    html, body { 
+      width: 100%; 
+      height: 100%; 
+      height: 100dvh; 
+      background: var(--bg-dark); 
+      color: var(--text); 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+      overflow: hidden; 
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
     
     #app {
       display: flex;
       flex-direction: column;
       width: 100%;
-      height: 100vh;
+      height: 100%;
+      height: 100dvh;
       max-width: 500px;
       margin: 0 auto;
       background: #07090e;
@@ -32,7 +51,7 @@
     }
 
     header {
-      height: 50px;
+      height: 48px;
       background: rgba(18,24,36,0.95);
       border-bottom: 1px solid var(--border);
       display: flex;
@@ -53,6 +72,7 @@
       flex-direction: column;
       gap: 12px;
       -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
     }
 
     .chat-msg { display: flex; gap: 8px; max-width: 85%; }
@@ -99,6 +119,7 @@
       display: block;
     }
 
+    /* 返信選択肢エリア */
     .options-bar {
       padding: 8px 10px;
       background: rgba(18,24,36,0.9);
@@ -125,24 +146,26 @@
     }
     .option-btn:hover { background: var(--cyan); color: #000; }
 
+    /* 入力エリア（iPhone下部のホームバー・セーフエリアを確保） */
     .chat-input-area {
-      padding: 8px;
-      background: rgba(18,24,36,0.95);
+      padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
+      background: rgba(18,24,36,0.98);
       border-top: 1px solid var(--border);
       display: flex;
       gap: 6px;
       align-items: center;
       flex-shrink: 0;
+      z-index: 20;
     }
     
     .chat-input-area input[type="text"] {
       flex: 1;
       background: #0a0d14;
       border: 1px solid var(--border);
-      border-radius: 16px;
+      border-radius: 18px;
       padding: 8px 14px;
       color: #fff;
-      font-size: 0.85rem;
+      font-size: 16px; /* iOSでタップ時に画面が勝手にズームするのを防止 */
       outline: none;
     }
 
@@ -150,20 +173,24 @@
       background: none;
       border: none;
       color: var(--cyan);
-      font-size: 1.1rem;
+      font-size: 1.2rem;
       cursor: pointer;
-      padding: 4px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .chat-input-area button.send-btn {
       background: var(--cyan);
       color: #000;
       border: none;
-      border-radius: 16px;
-      padding: 8px 14px;
+      border-radius: 18px;
+      padding: 8px 16px;
       font-weight: bold;
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       cursor: pointer;
+      flex-shrink: 0;
     }
 
     .img-modal {
@@ -212,12 +239,13 @@
   </div>
 
   <script>
-    // ★【ここにスプレッドシートのIDを入れてください】★
+    // 指定いただいたスプレッドシートIDを組み込み済みです
     const SHEET_ID = "1v8qLtwIIqpS0tk7oTAaZ0tEJ-QGAza0l2ihEtqr3eno";
     const SHEET_NAME = "chat";
 
     let autoReplies = [];
 
+    // Dropboxリンク自動置換（?raw=1化）
     function fixImageUrl(url) {
       if (!url) return "";
       let u = String(url).trim();
@@ -245,7 +273,7 @@
       }
     }
 
-    // Googleスプレッドシートからの直接JSONPコールバック
+    // Google Visualization API レスポンス処理
     window.googleSheetCallback = function(json) {
       try {
         if (!json || !json.table || !json.table.rows) {
@@ -291,13 +319,23 @@
       const script = document.createElement('script');
       script.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=responseHandler:googleSheetCallback&sheet=${encodeURIComponent(SHEET_NAME)}&_=${new Date().getTime()}`;
       script.onerror = function() {
-        updateBanner("⚠️ スプレッドシートへのアクセスに失敗しました", true);
+        updateBanner("⚠️ スプレッドシートへのアクセスに失敗しました（共有設定を確認してください）", true);
       };
       document.body.appendChild(script);
     }
 
     document.addEventListener("DOMContentLoaded", () => {
       loadGoogleSheet();
+
+      // スマホでキーボードが出た際に会話が隠れないよう自動スクロール
+      const inputEl = document.getElementById('chat-input');
+      inputEl.addEventListener('focus', () => {
+        setTimeout(() => {
+          window.scrollTo(0, 0);
+          const box = document.getElementById('chat-box');
+          box.scrollTop = box.scrollHeight;
+        }, 300);
+      });
     });
 
     function renderInitialLogs(logs) {
