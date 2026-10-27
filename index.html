@@ -108,7 +108,6 @@
     }
     .chat-msg.user .bubble { background: var(--bg-user); color: #fff; }
 
-    /* 返信中専用の1行コンパクトバブル */
     .typing-bubble {
       display: inline-flex;
       align-items: center;
@@ -175,6 +174,7 @@
       white-space: nowrap;
     }
     .option-btn:hover { background: var(--cyan); color: #000; }
+    .option-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
     .chat-input-area {
       padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
@@ -196,6 +196,15 @@
       color: #fff;
       font-size: 16px;
       outline: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    /* option制限時またはローディング中の無効化スタイル */
+    .chat-input-area input[type="text"]:disabled {
+      background: #141822;
+      border-color: rgba(255,255,255,0.08);
+      color: var(--muted);
+      cursor: not-allowed;
     }
 
     .file-attach-btn {
@@ -209,6 +218,10 @@
       align-items: center;
       justify-content: center;
     }
+    .file-attach-btn.disabled {
+      opacity: 0.3;
+      pointer-events: none;
+    }
 
     .chat-input-area button.send-btn {
       background: var(--cyan);
@@ -220,6 +233,11 @@
       font-size: 0.85rem;
       cursor: pointer;
       flex-shrink: 0;
+    }
+    .chat-input-area button.send-btn:disabled {
+      background: #2a364f;
+      color: var(--muted);
+      cursor: not-allowed;
     }
 
     .img-modal {
@@ -250,15 +268,16 @@
       </div>
     </div>
 
+    <!-- 返信選択肢エリア -->
     <div class="options-bar" id="options-bar"></div>
 
     <div class="chat-input-area">
-      <label class="file-attach-btn" title="画像を添付">
+      <label class="file-attach-btn" id="attach-label" title="画像を添付">
         📷
         <input type="file" id="user-file-input" accept="image/*" style="display:none;" onchange="handleUserImage(event)">
       </label>
       <input type="text" id="chat-input" placeholder="指示を入力..." onkeypress="if(event.key==='Enter')sendMsg()">
-      <button class="send-btn" onclick="sendMsg()">送信</button>
+      <button class="send-btn" id="send-btn" onclick="sendMsg()">送信</button>
     </div>
   </div>
 
@@ -271,6 +290,8 @@
     const SHEET_NAME = "chat";
 
     let autoReplies = [];
+    let isProcessing = false;   // 処理中フラグ
+    let hasActiveOptions = false; // 選択肢表示中フラグ
 
     function fixImageUrl(url) {
       if (!url) return "";
@@ -296,6 +317,34 @@
         banner.innerText = text;
         banner.style.color = isError ? 'var(--red)' : 'var(--cyan)';
         banner.style.borderColor = isError ? 'var(--red)' : 'var(--border)';
+      }
+    }
+
+    // 入力エリアのロック状態を統合制御
+    function updateInputState() {
+      const input = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('send-btn');
+      const attachLabel = document.getElementById('attach-label');
+
+      if (isProcessing) {
+        // 画像ロード中、または返信中
+        input.disabled = true;
+        sendBtn.disabled = true;
+        attachLabel.classList.add('disabled');
+        input.placeholder = "通信処理中...";
+      } else if (hasActiveOptions) {
+        // 選択肢がある場合：テキスト入力禁止（ボタン選択のみ）
+        input.disabled = true;
+        sendBtn.disabled = true;
+        attachLabel.classList.add('disabled');
+        input.value = "";
+        input.placeholder = "選択肢から選択してください";
+      } else {
+        // 通常状態：入力可能
+        input.disabled = false;
+        sendBtn.disabled = false;
+        attachLabel.classList.remove('disabled');
+        input.placeholder = "指示を入力...";
       }
     }
 
@@ -362,25 +411,34 @@
       });
     });
 
-    function renderInitialLogs(logs) {
+    // 初期ログの順次レンダリング（初期画像がある場合も待機）
+    async function renderInitialLogs(logs) {
       let lastOptions = "";
-      logs.forEach(msg => {
+      for (const msg of logs) {
         if (msg.text || msg.image) {
-          addMessageUI(msg.author, msg.avatar, msg.text, 'other', msg.image);
+          await addMessageUI(msg.author, msg.avatar, msg.text, 'other', msg.image);
         }
         if (msg.options) lastOptions = msg.options;
-      });
-      if (lastOptions) setOptions(lastOptions);
+      }
+      if (lastOptions) {
+        setOptions(lastOptions);
+      } else {
+        clearOptions();
+      }
     }
 
-    function sendMsg(customText = null) {
+    // 送信処理
+    async function sendMsg(customText = null) {
+      if (isProcessing) return;
+
       const input = document.getElementById('chat-input');
       const text = customText !== null ? customText : input.value.trim();
       if (!text) return;
 
-      addMessageUI('あなた', 'YOU', text, 'user');
+      // ユーザー自身のメッセージを即時表示
+      await addMessageUI('あなた', 'YOU', text, 'user');
       input.value = '';
-      clearOptions();
+      clearOptions(); // 選択肢をクリアして一旦リセット
 
       const normInput = normalizeStr(text);
 
@@ -397,20 +455,37 @@
       }
 
       if (matchedRule) {
+        // 返信中状態へ（入力ロック）
+        isProcessing = true;
+        updateInputState();
+
         const typingEl = showTypingIndicator(matchedRule.author, matchedRule.avatar);
 
-        setTimeout(() => {
+        setTimeout(async () => {
           if (typingEl && typingEl.parentNode) {
             typingEl.parentNode.removeChild(typingEl);
           }
 
-          addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.image);
-          if (matchedRule.options) setOptions(matchedRule.options);
+          // 画像がある場合は読み込み完了を待機
+          await addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.image);
+
+          // 画像読み込み完了後に選択肢の有無を設定
+          if (matchedRule.options) {
+            setOptions(matchedRule.options);
+          } else {
+            clearOptions();
+          }
+
+          // 処理中フラグ解除＆状態更新
+          isProcessing = false;
+          updateInputState();
         }, 3000);
+      } else {
+        // マッチしなかった場合は通常の入力状態に戻す
+        updateInputState();
       }
     }
 
-    // 1行サイズの返信中バブルを表示
     function showTypingIndicator(author, avatarText) {
       const box = document.getElementById('chat-box');
       const div = document.createElement('div');
@@ -432,6 +507,7 @@
     }
 
     function handleUserImage(e) {
+      if (isProcessing || hasActiveOptions) return;
       const file = e.target.files[0];
       if (!file) return;
 
@@ -443,41 +519,89 @@
       e.target.value = '';
     }
 
+    // メッセージ描画（画像ロード完了までPromiseで待機）
     function addMessageUI(author, avatarText, text, type, imageUrl = '') {
-      const box = document.getElementById('chat-box');
-      const isUser = type === 'user';
-      const imgTag = imageUrl ? `<img src="${esc(imageUrl)}" class="msg-image" onclick="openImgModal('${esc(imageUrl)}')">` : '';
+      return new Promise((resolve) => {
+        const box = document.getElementById('chat-box');
+        const isUser = type === 'user';
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `chat-msg ${isUser ? 'user' : ''}`;
 
-      const html = `
-        <div class="chat-msg ${isUser ? 'user' : ''}">
+        let imgHtml = '';
+        if (imageUrl) {
+          imgHtml = `<img src="${esc(imageUrl)}" class="msg-image" alt="添付画像">`;
+        }
+
+        msgDiv.innerHTML = `
           ${!isUser ? `<div class="avatar">${esc(avatarText)}</div>` : ''}
           <div class="msg-body">
             <div class="msg-author">${esc(author)}</div>
-            <div class="bubble">${esc(text)}${imgTag}</div>
+            <div class="bubble">${esc(text)}${imgHtml}</div>
           </div>
-        </div>
-      `;
-      box.insertAdjacentHTML('beforeend', html);
-      box.scrollTop = box.scrollHeight;
+        `;
+
+        box.appendChild(msgDiv);
+        box.scrollTop = box.scrollHeight;
+
+        if (imageUrl) {
+          const imgEl = msgDiv.querySelector('.msg-image');
+          imgEl.onclick = () => openImgModal(imageUrl);
+
+          // 画像の読み込み完了（またはエラー終了）を待つ
+          if (imgEl.complete) {
+            box.scrollTop = box.scrollHeight;
+            resolve();
+          } else {
+            imgEl.onload = () => {
+              box.scrollTop = box.scrollHeight;
+              resolve();
+            };
+            imgEl.onerror = () => {
+              console.warn("画像読み込み失敗:", imageUrl);
+              box.scrollTop = box.scrollHeight;
+              resolve();
+            };
+          }
+        } else {
+          resolve();
+        }
+      });
     }
 
+    // 選択肢ボタンの描画と入力ロック制御
     function setOptions(optionsStr) {
       const bar = document.getElementById('options-bar');
       bar.innerHTML = '';
-      if (!optionsStr) return;
+      if (!optionsStr) {
+        clearOptions();
+        return;
+      }
 
       const opts = optionsStr.split(/[,、]/).map(s => s.trim()).filter(s => s.length > 0);
+      if (opts.length === 0) {
+        clearOptions();
+        return;
+      }
+
+      hasActiveOptions = true;
+      updateInputState();
+
       opts.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
         btn.innerText = opt;
-        btn.onclick = () => sendMsg(opt);
+        btn.onclick = () => {
+          if (isProcessing) return;
+          sendMsg(opt);
+        };
         bar.appendChild(btn);
       });
     }
 
     function clearOptions() {
       document.getElementById('options-bar').innerHTML = '';
+      hasActiveOptions = false;
+      updateInputState();
     }
 
     function openImgModal(src) {
