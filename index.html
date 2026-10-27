@@ -24,7 +24,6 @@
       -webkit-tap-highlight-color: transparent; 
     }
     
-    /* スマホのアドレスバー・キーボード表示によるズレを完全に防ぐ */
     html, body { 
       width: 100%; 
       height: 100%; 
@@ -108,6 +107,28 @@
     }
     .chat-msg.user .bubble { background: var(--bg-user); color: #fff; }
 
+    /* 「返信中...」アニメーション */
+    .typing-box {
+      font-size: 0.8rem;
+      color: var(--cyan);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .typing-dots span {
+      display: inline-block;
+      animation: blink 1.4s infinite both;
+      font-weight: bold;
+    }
+    .typing-dots span:nth-child(1) { animation-delay: .0s; }
+    .typing-dots span:nth-child(2) { animation-delay: .2s; }
+    .typing-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes blink {
+      0% { opacity: .2; }
+      20% { opacity: 1; }
+      100% { opacity: .2; }
+    }
+
     .msg-image {
       margin-top: 6px;
       max-width: 220px;
@@ -119,7 +140,6 @@
       display: block;
     }
 
-    /* 返信選択肢エリア */
     .options-bar {
       padding: 8px 10px;
       background: rgba(18,24,36,0.9);
@@ -146,7 +166,6 @@
     }
     .option-btn:hover { background: var(--cyan); color: #000; }
 
-    /* 入力エリア（iPhone下部のホームバー・セーフエリアを確保） */
     .chat-input-area {
       padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)) 8px;
       background: rgba(18,24,36,0.98);
@@ -165,7 +184,7 @@
       border-radius: 18px;
       padding: 8px 14px;
       color: #fff;
-      font-size: 16px; /* iOSでタップ時に画面が勝手にズームするのを防止 */
+      font-size: 16px;
       outline: none;
     }
 
@@ -221,7 +240,6 @@
       </div>
     </div>
 
-    <!-- 返信選択肢エリア -->
     <div class="options-bar" id="options-bar"></div>
 
     <div class="chat-input-area">
@@ -239,13 +257,11 @@
   </div>
 
   <script>
-    // 指定いただいたスプレッドシートIDを組み込み済みです
     const SHEET_ID = "1v8qLtwIIqpS0tk7oTAaZ0tEJ-QGAza0l2ihEtqr3eno";
     const SHEET_NAME = "chat";
 
     let autoReplies = [];
 
-    // Dropboxリンク自動置換（?raw=1化）
     function fixImageUrl(url) {
       if (!url) return "";
       let u = String(url).trim();
@@ -273,7 +289,6 @@
       }
     }
 
-    // Google Visualization API レスポンス処理
     window.googleSheetCallback = function(json) {
       try {
         if (!json || !json.table || !json.table.rows) {
@@ -327,7 +342,6 @@
     document.addEventListener("DOMContentLoaded", () => {
       loadGoogleSheet();
 
-      // スマホでキーボードが出た際に会話が隠れないよう自動スクロール
       const inputEl = document.getElementById('chat-input');
       inputEl.addEventListener('focus', () => {
         setTimeout(() => {
@@ -360,26 +374,54 @@
 
       const normInput = normalizeStr(text);
 
-      setTimeout(() => {
-        let matchedRule = null;
-
-        for (const rule of autoReplies) {
-          if (rule.trigger) {
-            const normTrigger = normalizeStr(rule.trigger);
-            if (normTrigger !== "" && normInput.includes(normTrigger)) {
-              matchedRule = rule;
-              break;
-            }
+      let matchedRule = null;
+      for (const rule of autoReplies) {
+        if (rule.trigger) {
+          const triggerList = rule.trigger.split(/[,、]/).map(t => normalizeStr(t)).filter(t => t.length > 0);
+          const isMatched = triggerList.some(singleTrigger => normInput.includes(singleTrigger));
+          if (isMatched) {
+            matchedRule = rule;
+            break;
           }
         }
+      }
 
-        if (matchedRule) {
+      if (matchedRule) {
+        // 「返信中…」を表示
+        const typingEl = showTypingIndicator(matchedRule.author, matchedRule.avatar);
+
+        setTimeout(() => {
+          // 「返信中…」を削除
+          if (typingEl && typingEl.parentNode) {
+            typingEl.parentNode.removeChild(typingEl);
+          }
+
+          // 本文を表示
           addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.image);
           if (matchedRule.options) setOptions(matchedRule.options);
-        } else {
-          addMessageUI('マル', 'マ', '了解！その手がかりについてさらに調べてみるね！', 'other');
-        }
-      }, 400);
+        }, 3000);
+      }
+    }
+
+    // 「返信中…」バブルを表示する関数
+    function showTypingIndicator(author, avatarText) {
+      const box = document.getElementById('chat-box');
+      const div = document.createElement('div');
+      div.className = 'chat-msg';
+      div.innerHTML = `
+        <div class="avatar">${esc(avatarText)}</div>
+        <div class="msg-body">
+          <div class="msg-author">${esc(author)}</div>
+          <div class="bubble">
+            <span class="typing-box">
+              返信中<span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+            </span>
+          </div>
+        </div>
+      `;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+      return div;
     }
 
     function handleUserImage(e) {
@@ -389,10 +431,6 @@
       const reader = new FileReader();
       reader.onload = function(event) {
         addMessageUI('あなた', 'YOU', '画像を送信しました', 'user', event.target.result);
-        setTimeout(() => {
-          addMessageUI('マル', 'マ', '画像を受け取ったよ！詳しく解析してみるね。', 'other');
-          setOptions('解析結果は？, 他の場所を調べる');
-        }, 500);
       };
       reader.readAsDataURL(file);
       e.target.value = '';
@@ -424,7 +462,7 @@
       bar.innerHTML = '';
       if (!optionsStr) return;
 
-      const opts = optionsStr.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      const opts = optionsStr.split(/[,、]/).map(s => s.trim()).filter(s => s.length > 0);
       opts.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
