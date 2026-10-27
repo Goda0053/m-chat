@@ -138,15 +138,37 @@
       100% { opacity: .2; }
     }
 
-    .msg-image {
+    /* 複数画像用のグリッドコンテナ */
+    .msg-images-grid {
+      display: grid;
+      grid-gap: 6px;
       margin-top: 6px;
+    }
+    /* 1枚のとき */
+    .msg-images-grid.count-1 {
+      grid-template-columns: 1fr;
       max-width: 220px;
-      max-height: 200px;
-      border-radius: 8px;
+    }
+    /* 2枚以上のとき（2列並び） */
+    .msg-images-grid.count-multi {
+      grid-template-columns: repeat(2, 1fr);
+      max-width: 260px;
+    }
+
+    .msg-image {
+      width: 100%;
+      height: 110px;
+      border-radius: 6px;
       border: 1px solid var(--border);
       object-fit: cover;
       cursor: pointer;
       display: block;
+      background: #0f141f;
+    }
+    /* 1枚だけの時は大きめに表示 */
+    .msg-images-grid.count-1 .msg-image {
+      height: auto;
+      max-height: 200px;
     }
 
     .options-bar {
@@ -199,7 +221,6 @@
       transition: background 0.2s, border-color 0.2s;
     }
 
-    /* option制限時またはローディング中の無効化スタイル */
     .chat-input-area input[type="text"]:disabled {
       background: #141822;
       border-color: rgba(255,255,255,0.08);
@@ -268,7 +289,6 @@
       </div>
     </div>
 
-    <!-- 返信選択肢エリア -->
     <div class="options-bar" id="options-bar"></div>
 
     <div class="chat-input-area">
@@ -290,17 +310,20 @@
     const SHEET_NAME = "chat";
 
     let autoReplies = [];
-    let isProcessing = false;   // 処理中フラグ
-    let hasActiveOptions = false; // 選択肢表示中フラグ
+    let isProcessing = false;
+    let hasActiveOptions = false;
 
-    function fixImageUrl(url) {
-      if (!url) return "";
-      let u = String(url).trim();
-      if (u.includes("dropbox.com")) {
-        u = u.replace(/\?dl=0$/, "").replace(/\?dl=1$/, "");
-        u = u + (u.includes("?") ? "&raw=1" : "?raw=1");
-      }
-      return u;
+    // 単体または複数カンマ区切りのURLを整形
+    function parseImageUrls(rawStr) {
+      if (!rawStr) return [];
+      const parts = String(rawStr).split(/[,、\n]/).map(s => s.trim()).filter(s => s.length > 0);
+      return parts.map(u => {
+        if (u.includes("dropbox.com")) {
+          u = u.replace(/\?dl=0$/, "").replace(/\?dl=1$/, "");
+          u = u + (u.includes("?") ? "&raw=1" : "?raw=1");
+        }
+        return u;
+      });
     }
 
     function normalizeStr(str) {
@@ -320,27 +343,23 @@
       }
     }
 
-    // 入力エリアのロック状態を統合制御
     function updateInputState() {
       const input = document.getElementById('chat-input');
       const sendBtn = document.getElementById('send-btn');
       const attachLabel = document.getElementById('attach-label');
 
       if (isProcessing) {
-        // 画像ロード中、または返信中
         input.disabled = true;
         sendBtn.disabled = true;
         attachLabel.classList.add('disabled');
         input.placeholder = "通信処理中...";
       } else if (hasActiveOptions) {
-        // 選択肢がある場合：テキスト入力禁止（ボタン選択のみ）
         input.disabled = true;
         sendBtn.disabled = true;
         attachLabel.classList.add('disabled');
         input.value = "";
         input.placeholder = "選択肢から選択してください";
       } else {
-        // 通常状態：入力可能
         input.disabled = false;
         sendBtn.disabled = false;
         attachLabel.classList.remove('disabled');
@@ -360,7 +379,7 @@
         autoReplies = [];
 
         rows.forEach(r => {
-          let author = "マル", avatar = "マ", text = "", trigger = "", image = "", options = "";
+          let author = "マル", avatar = "マ", text = "", trigger = "", images = [], options = "";
 
           r.c.forEach((cell, idx) => {
             const val = cell && cell.v !== null && cell.v !== undefined ? String(cell.v) : "";
@@ -368,11 +387,11 @@
             if (idx === 1 && val.trim()) avatar = val.trim();
             if (idx === 2) text = val;
             if (idx === 3) trigger = val.trim();
-            if (idx === 4) image = fixImageUrl(val.trim());
+            if (idx === 4) images = parseImageUrls(val); // 複数URLをパース
             if (idx === 5) options = val.trim();
           });
 
-          const rowData = { author, avatar, text, trigger, image, options };
+          const rowData = { author, avatar, text, trigger, images, options };
           if (!trigger) {
             initialLogs.push(rowData);
           } else {
@@ -411,12 +430,11 @@
       });
     });
 
-    // 初期ログの順次レンダリング（初期画像がある場合も待機）
     async function renderInitialLogs(logs) {
       let lastOptions = "";
       for (const msg of logs) {
-        if (msg.text || msg.image) {
-          await addMessageUI(msg.author, msg.avatar, msg.text, 'other', msg.image);
+        if (msg.text || (msg.images && msg.images.length > 0)) {
+          await addMessageUI(msg.author, msg.avatar, msg.text, 'other', msg.images);
         }
         if (msg.options) lastOptions = msg.options;
       }
@@ -427,7 +445,6 @@
       }
     }
 
-    // 送信処理
     async function sendMsg(customText = null) {
       if (isProcessing) return;
 
@@ -435,10 +452,9 @@
       const text = customText !== null ? customText : input.value.trim();
       if (!text) return;
 
-      // ユーザー自身のメッセージを即時表示
       await addMessageUI('あなた', 'YOU', text, 'user');
       input.value = '';
-      clearOptions(); // 選択肢をクリアして一旦リセット
+      clearOptions();
 
       const normInput = normalizeStr(text);
 
@@ -455,7 +471,6 @@
       }
 
       if (matchedRule) {
-        // 返信中状態へ（入力ロック）
         isProcessing = true;
         updateInputState();
 
@@ -466,22 +481,19 @@
             typingEl.parentNode.removeChild(typingEl);
           }
 
-          // 画像がある場合は読み込み完了を待機
-          await addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.image);
+          // すべての画像がロード完了するまで待機
+          await addMessageUI(matchedRule.author, matchedRule.avatar, matchedRule.text, 'other', matchedRule.images);
 
-          // 画像読み込み完了後に選択肢の有無を設定
           if (matchedRule.options) {
             setOptions(matchedRule.options);
           } else {
             clearOptions();
           }
 
-          // 処理中フラグ解除＆状態更新
           isProcessing = false;
           updateInputState();
         }, 3000);
       } else {
-        // マッチしなかった場合は通常の入力状態に戻す
         updateInputState();
       }
     }
@@ -513,62 +525,69 @@
 
       const reader = new FileReader();
       reader.onload = function(event) {
-        addMessageUI('あなた', 'YOU', '画像を送信しました', 'user', event.target.result);
+        addMessageUI('あなた', 'YOU', '画像を送信しました', 'user', [event.target.result]);
       };
       reader.readAsDataURL(file);
       e.target.value = '';
     }
 
-    // メッセージ描画（画像ロード完了までPromiseで待機）
-    function addMessageUI(author, avatarText, text, type, imageUrl = '') {
+    // 複数画像対応のメッセージ描画処理（全画像の完了をPromise.allで待機）
+    function addMessageUI(author, avatarText, text, type, imageUrls = []) {
       return new Promise((resolve) => {
         const box = document.getElementById('chat-box');
         const isUser = type === 'user';
         const msgDiv = document.createElement('div');
         msgDiv.className = `chat-msg ${isUser ? 'user' : ''}`;
 
-        let imgHtml = '';
-        if (imageUrl) {
-          imgHtml = `<img src="${esc(imageUrl)}" class="msg-image" alt="添付画像">`;
+        let imagesGridHtml = '';
+        if (imageUrls && imageUrls.length > 0) {
+          const gridClass = imageUrls.length === 1 ? 'count-1' : 'count-multi';
+          const imgTags = imageUrls.map(url => `<img src="${esc(url)}" class="msg-image" alt="添付画像">`).join('');
+          imagesGridHtml = `<div class="msg-images-grid ${gridClass}">${imgTags}</div>`;
         }
 
         msgDiv.innerHTML = `
           ${!isUser ? `<div class="avatar">${esc(avatarText)}</div>` : ''}
           <div class="msg-body">
             <div class="msg-author">${esc(author)}</div>
-            <div class="bubble">${esc(text)}${imgHtml}</div>
+            <div class="bubble">${esc(text)}${imagesGridHtml}</div>
           </div>
         `;
 
         box.appendChild(msgDiv);
         box.scrollTop = box.scrollHeight;
 
-        if (imageUrl) {
-          const imgEl = msgDiv.querySelector('.msg-image');
-          imgEl.onclick = () => openImgModal(imageUrl);
+        if (imageUrls && imageUrls.length > 0) {
+          const imgElements = msgDiv.querySelectorAll('.msg-image');
+          const promises = [];
 
-          // 画像の読み込み完了（またはエラー終了）を待つ
-          if (imgEl.complete) {
+          imgElements.forEach((img, idx) => {
+            const url = imageUrls[idx];
+            img.onclick = () => openImgModal(url);
+
+            promises.push(new Promise(res => {
+              if (img.complete) {
+                res();
+              } else {
+                img.onload = () => res();
+                img.onerror = () => {
+                  console.warn("画像読み込み失敗:", url);
+                  res();
+                };
+              }
+            }));
+          });
+
+          Promise.all(promises).then(() => {
             box.scrollTop = box.scrollHeight;
             resolve();
-          } else {
-            imgEl.onload = () => {
-              box.scrollTop = box.scrollHeight;
-              resolve();
-            };
-            imgEl.onerror = () => {
-              console.warn("画像読み込み失敗:", imageUrl);
-              box.scrollTop = box.scrollHeight;
-              resolve();
-            };
-          }
+          });
         } else {
           resolve();
         }
       });
     }
 
-    // 選択肢ボタンの描画と入力ロック制御
     function setOptions(optionsStr) {
       const bar = document.getElementById('options-bar');
       bar.innerHTML = '';
