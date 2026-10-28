@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ディメンション - DIMENSION</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Zen+Kaku+Gothic+New:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      background-color: #05070c;
+      color: #d1d5db;
+    }
+    .mono {
+      font-family: 'Share Tech Mono', monospace;
+    }
+    /* CRT & Scanline effect */
+    .scanlines {
+      background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.4) 50%
+      ), linear-gradient(
+        90deg,
+        rgba(255, 0, 0, 0.03),
+        rgba(0, 255, 0, 0.01),
+        rgba(0, 0, 255, 0.03)
+      );
+      background-size: 100% 4px, 6px 100%;
+      pointer-events: none;
+    }
+    .cyber-glow {
+      text-shadow: 0 0 10px rgba(56, 189, 248, 0.6), 0 0 20px rgba(56, 189, 248, 0.3);
+    }
+    .red-glow {
+      text-shadow: 0 0 10px rgba(239, 68, 68, 0.7);
+    }
+    .glass-panel {
+      background: rgba(13, 20, 36, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+    .glass-panel-warning {
+      background: rgba(30, 15, 15, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #38bdf8;
+    }
+  </style>
+</head>
+<body class="min-h-screen relative overflow-x-hidden selection:bg-cyan-500 selection:text-black">
+  <!-- Scanline Overlay -->
+  <div class="fixed inset-0 scanlines z-50 pointer-events-none opacity-60"></div>
+
+  <!-- Background Ambient Glow -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-96 bg-cyan-900/10 blur-[130px] pointer-events-none -z-10"></div>
+  <div class="fixed bottom-0 right-0 w-80 h-80 bg-blue-900/10 blur-[120px] pointer-events-none -z-10"></div>
+
+  <!-- Main Container -->
+  <div id="app" class="min-h-screen flex flex-col justify-between max-w-4xl mx-auto p-4 md:p-8 z-10 relative">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="flex items-center justify-between border-b border-slate-800 pb-4 mb-6">
+      <div class="flex items-center gap-2 cursor-pointer" onclick="showScreen('screen-top')">
+        <span class="inline-block w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></span>
+        <span class="text-xs tracking-widest text-cyan-400 mono uppercase">DIMENSION SECURE SYSTEM v4.9</span>
+      </div>
+      <div id="auth-status-badge" class="text-xs text-slate-500 mono border border-slate-800 px-2.5 py-1 rounded bg-slate-950/60">
+        STATUS: GUEST_MODE
+      </div>
+    </header>
+
+    <!-- ==================== SCREEN 1: TOP LANDING ==================== -->
+    <section id="screen-top" class="my-auto py-12 flex flex-col items-center text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-cyan-500/30 bg-cyan-950/30 text-cyan-400 text-xs tracking-wider mb-6 mono">
+        CONNECTING TO QUANTUM LAYER
+      </div>
+
+      <h1 class="text-5xl md:text-7xl font-extrabold tracking-widest text-white mb-4 cyber-glow">
+        ディメンション
+      </h1>
+      <p class="text-slate-400 text-sm md:text-base max-w-md tracking-wider mb-10 mono">
+        PROJECT DIMENSION // CLASSIFIED GATEWAY
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 w-full max-w-xs">
+        <button onclick="showScreen('screen-exam')" class="w-full px-6 py-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-black font-bold text-base tracking-widest shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
+          入社試験
+        </button>
+        <button onclick="showScreen('screen-login')" class="w-full px-6 py-4 rounded-xl glass-panel hover:bg-slate-800/80 text-cyan-300 font-semibold text-base tracking-widest active:scale-95 transition-all">
+          ログイン
+        </button>
+      </div>
+
+      <div class="mt-14 text-xs text-slate-600 mono">
+        AUTHORIZED PERSONNEL ONLY. ALL ACTIONS ARE LOGGED.
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 2: 入社試験 (EXAMS) ==================== -->
+    <section id="screen-exam" class="hidden flex-col gap-6 my-auto py-4">
+      <div class="flex items-center justify-between">
+        <button onclick="showScreen('screen-top')" class="text-xs text-slate-400 hover:text-cyan-400 flex items-center gap-1 mono">
+          &larr; TOPに戻る
+        </button>
+        <span class="text-xs text-cyan-400 mono">EXAM SYSTEM ONLINE</span>
+      </div>
+
+      <div class="glass-panel p-6 rounded-2xl border-cyan-500/30">
+        <h2 class="text-2xl font-bold text-white mb-2 tracking-wide flex items-center gap-2">
+          <span class="text-cyan-400">#</span> 入社採用適性試験
+        </h2>
+        <p class="text-slate-300 text-sm leading-relaxed mb-4">
+          こちらにある、様々な入社試験をクリアし、規定ポイントを獲得すると、入社できます。
+        </p>
+        <div class="p-3 bg-cyan-950/40 rounded-xl border border-cyan-500/20 text-xs text-cyan-300 flex flex-wrap gap-4 items-center justify-between">
+          <div>
+            採用合格条件：<span class="text-yellow-400 font-bold">【必須試験 2種】</span>および<span class="text-yellow-400 font-bold">【任意試験 1種以上】</span>（計3種以上）のクリア
+          </div>
+          <div class="mono bg-slate-900 px-3 py-1 rounded text-cyan-400 font-semibold">
+            CLEAR: <span id="clear-count-display">0</span> / 6
+          </div>
+        </div>
+      </div>
+
+      <!-- 必須試験グループ -->
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-2.5 py-0.5 text-xs font-bold bg-rose-500/20 border border-rose-500/40 text-rose-300 rounded-md tracking-wider">
+            必須試験
+          </span>
+          <span class="text-xs text-slate-400">※全てクリアする必要があります</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="mandatory-exams-container">
+          <!-- Mandatory Cards injected by JS -->
+        </div>
+      </div>
+
+      <!-- 任意試験グループ -->
+      <div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="px-2.5 py-0.5 text-xs font-bold bg-blue-500/20 border border-blue-500/40 text-blue-300 rounded-md tracking-wider">
+            任意試験
+          </span>
+          <span class="text-xs text-slate-400">※1つ以上クリアで規定到達</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="optional-exams-container">
+          <!-- Optional Cards injected by JS -->
+        </div>
+      </div>
+
+      <!-- 合格通知 & ID/PASS表示エリア -->
+      <div id="pass-certificate-area" class="hidden glass-panel p-6 rounded-2xl border-emerald-500/50 bg-emerald-950/20">
+        <div class="flex items-center gap-3 text-emerald-400 font-bold text-lg mb-2">
+          <svg class="w-6 h-6 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          規定数達成：入社資格認定
+        </div>
+        <p class="text-sm text-slate-200 mb-4">
+          あなたは規定数に達したので入社を認めます。以下の認証情報を控えて内部システムにアクセスしてください。
+        </p>
+
+        <div class="p-4 bg-black/60 rounded-xl border border-emerald-500/30 flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div class="space-y-1 mono text-center sm:text-left">
+            <div><span class="text-slate-500 text-xs">ID :</span> <span class="text-emerald-400 font-bold tracking-widest text-base">DIM-7749</span></div>
+            <div><span class="text-slate-500 text-xs">PASS :</span> <span class="text-emerald-400 font-bold tracking-widest text-base">NEXUS-X</span></div>
+          </div>
+          <button onclick="autofillAndGoLogin('DIM-7749', 'NEXUS-X')" class="w-full sm:w-auto px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-xl tracking-wider transition-all">
+            この情報でログイン画面へ &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 3: ログイン (LOGIN) ==================== -->
+    <section id="screen-login" class="hidden flex-col items-center justify-center my-auto py-8">
+      <div class="w-full max-w-md glass-panel p-8 rounded-2xl border-slate-700">
+        <div class="text-center mb-6">
+          <div class="text-cyan-400 mono text-xs tracking-widest mb-1">SYSTEM GATEWAY AUTHENTICATION</div>
+          <h2 class="text-2xl font-bold text-white tracking-wider">ディメンション 認証</h2>
+          <p class="text-xs text-slate-400 mt-1">IDとパスワードを入力してアクセスしてください</p>
+        </div>
+
+        <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1 mono">ID</label>
+            <input type="text" id="input-id" required autocomplete="off" placeholder="DIM-XXXX or KANBU" class="w-full px-4 py-3 bg-slate-950/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-400 mono text-sm transition-colors">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1 mono">PASSWORD</label>
+            <input type="password" id="input-pass" required autocomplete="off" placeholder="••••••••" class="w-full px-4 py-3 bg-slate-950/80 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-400 mono text-sm transition-colors">
+          </div>
+
+          <div id="login-error-msg" class="hidden p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs">
+            認証に失敗しました。IDまたはパスワードが正しくありません。
+          </div>
+
+          <button type="submit" class="w-full py-3.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl tracking-widest text-sm transition-all shadow-lg shadow-cyan-500/20 active:scale-95">
+            アクセス
+          </button>
+        </form>
+
+        <div class="mt-6 flex justify-between items-center text-xs text-slate-500 border-t border-slate-800 pt-4">
+          <button onclick="showScreen('screen-top')" class="hover:text-cyan-400">&larr; TOPへ戻る</button>
+          <button onclick="showScreen('screen-exam')" class="hover:text-cyan-400">入社試験を受ける</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== SCREEN 4: 内部ポータル (DASHBOARD) ==================== -->
+    <section id="screen-portal" class="hidden flex-col gap-6 my-auto py-2">
+      <!-- Portal Sub Header -->
+      <div class="glass-panel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3 border-slate-700">
+        <div class="flex items-center gap-3">
+          <div id="role-avatar" class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center font-bold text-cyan-300 mono">
+            UID
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span id="role-display-name" class="font-bold text-white text-sm">一般構成員</span>
+              <span id="role-badge" class="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">
+                LEVEL 1
+              </span>
+            </div>
+            <div class="text-xs text-slate-400 mono" id="user-id-display">ID: DIM-7749</div>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="flex items-center gap-1 sm:gap-2 overflow-x-auto w-full sm:w-auto pt-2 sm:pt-0">
+          <button onclick="switchTab('jobs')" id="tab-btn-jobs" class="tab-btn active px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wider transition-all">
+            仕事募集中
+          </button>
+          <button onclick="switchTab('bbs')" id="tab-btn-bbs" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wider transition-all">
+            掲示板
+          </button>
+          <button onclick="switchTab('memo')" id="tab-btn-memo" class="tab-btn px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wider transition-all relative">
+            メモ
+            <span id="memo-alert-dot" class="hidden absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+          </button>
+          <button onclick="handleLogout()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:bg-rose-950/40 border border-rose-900/40 transition-all">
+            ログアウト
+          </button>
+        </div>
+      </div>
+
+      <!-- TAB 1: 仕事募集中 (JOBS) -->
+      <div id="tab-content-jobs" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-cyan-400"></span> 進行中オペレーション / 案件一覧
+          </h3>
+          <span class="text-xs text-slate-500 mono">ACTIVE DIRECTIVE: 03</span>
+        </div>
+
+        <!-- Job Cards -->
+        <div class="grid grid-cols-1 gap-4">
+          <!-- ターゲット案件: 確認作業:日比谷 -->
+          <div class="glass-panel p-5 rounded-2xl border-cyan-500/40 relative overflow-hidden">
+            <div class="absolute top-0 right-0 px-3 py-1 bg-cyan-500/10 border-b border-l border-cyan-500/30 text-cyan-400 text-[10px] font-mono uppercase tracking-wider">
+              PRIORITY MISSION
+            </div>
+            <div class="flex items-start justify-between gap-4 mb-2">
+              <div>
+                <span class="text-xs font-bold text-cyan-400 mono">MISSION CODE: HIBIYA-X</span>
+                <h4 class="text-lg font-bold text-white mt-0.5">確認作業:日比谷</h4>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-400">募集枠</div>
+                <div id="hibiya-slots-badge" class="text-sm font-bold mono text-amber-400">残り1名</div>
+              </div>
+            </div>
+            
+            <p class="text-sm text-slate-300 leading-relaxed mb-4 bg-slate-950/40 p-3 rounded-xl border border-slate-800">
+              日比谷で計画の一部となる重要な案件がある。チラシは既に配布済なので、それを元に作業をしてほしい。
+            </p>
+
+            <!-- 応募ボタン & 応募後テキスト -->
+            <div id="hibiya-action-area">
+              <button onclick="applyHibiyaJob()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-xl tracking-wider shadow-md transition-all">
+                応募する
+              </button>
+            </div>
+
+            <!-- 応募完了後の指令書ボックス -->
+            <div id="hibiya-result-directive" class="hidden mt-4 p-4 rounded-xl border border-cyan-400/40 bg-slate-950/90 text-sm leading-relaxed space-y-3">
+              <div class="flex items-center gap-2 text-cyan-400 font-bold text-xs tracking-wider border-b border-cyan-900/50 pb-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                極秘作戦指令通知 [応募完了]
+              </div>
+              <div class="text-slate-200 whitespace-pre-line text-xs md:text-sm font-medium">こちらは、とある計画のために必須となる作戦です。
+
+日比谷駅のA12にある映画のポスターの二次元コードを読み取り、吹き出しの頭を上から読んで指示に従ってください。
+
+これはチラシを既に渡した【封筒所有者】を利用するための都市伝説です。
+正しく動くか、確認してください。
+あなたが最後の確認者となります。</div>
+            </div>
+          </div>
+
+          <!-- ダミー案件 1 -->
+          <div class="glass-panel p-5 rounded-2xl border-slate-800 opacity-80">
+            <div class="flex items-start justify-between gap-4 mb-2">
+              <div>
+                <span class="text-xs font-bold text-slate-500 mono">MISSION CODE: SHIBUYA-09</span>
+                <h4 class="text-base font-bold text-slate-200 mt-0.5">監視データの回収: 渋谷</h4>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-400">募集枠</div>
+                <div class="text-sm font-bold mono text-slate-500">残り0名 (受付終了)</div>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">
+              スクランブル交差点付近のBeaconログの物理吸い上げ作業。
+            </p>
+            <button disabled class="px-4 py-2 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl cursor-not-allowed">
+              定員に達しました
+            </button>
+          </div>
+
+          <!-- ダミー案件 2 -->
+          <div class="glass-panel p-5 rounded-2xl border-slate-800 opacity-80">
+            <div class="flex items-start justify-between gap-4 mb-2">
+              <div>
+                <span class="text-xs font-bold text-slate-500 mono">MISSION CODE: ROPPONGI-02</span>
+                <h4 class="text-base font-bold text-slate-200 mt-0.5">資材運搬補助: 六本木</h4>
+              </div>
+              <div class="text-right">
+                <div class="text-xs text-slate-400">募集枠</div>
+                <div class="text-sm font-bold mono text-slate-500">残り0名 (受付終了)</div>
+              </div>
+            </div>
+            <p class="text-xs text-slate-400 mb-3">
+              指定された機材ケースを指定倉庫から指定地下通路へ搬送。
+            </p>
+            <button disabled class="px-4 py-2 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl cursor-not-allowed">
+              定員に達しました
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: 掲示板 (BBS) -->
+      <div id="tab-content-bbs" class="hidden space-y-4">
+        <!-- 一般ユーザー時の表示 -->
+        <div id="bbs-locked-view" class="glass-panel-warning p-10 rounded-2xl text-center space-y-3">
+          <div class="w-12 h-12 mx-auto rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          </div>
+          <h4 class="text-base font-bold text-rose-300 tracking-wide">
+            【幹部以外には閲覧権限がありません】
+          </h4>
+          <p class="text-xs text-slate-400 max-w-sm mx-auto">
+            このセクションは最高幹部暗号化キーを保有するアカウントのみアクセス可能です。セキュリティ規約に基づき照会が遮断されました。
+          </p>
+        </div>
+
+        <!-- 幹部ユーザー時の特別表示 -->
+        <div id="bbs-executive-view" class="hidden space-y-3">
+          <div class="flex items-center justify-between border-b border-rose-900/40 pb-2">
+            <h4 class="text-sm font-bold text-rose-400 tracking-wider flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> 最高幹部連絡掲示板 [極秘]
+            </h4>
+            <span class="text-xs text-rose-300 mono">CLEARANCE: EXECUTIVE_A</span>
+          </div>
+
+          <div class="glass-panel p-4 rounded-xl border-rose-900/40 space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-white font-bold">[統括] 日比谷作戦について</span>
+              <span class="text-slate-500 mono">2026-10-28 09:12</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              末端への指示は日比谷A12のポスターに集約した。封筒の件は一般構成員には全貌を知らせるな。
+            </p>
+          </div>
+
+          <div class="glass-panel p-4 rounded-xl border-rose-900/40 space-y-2">
+            <div class="flex justify-between items-center text-xs">
+              <span class="text-white font-bold">[警備] 潜入者の捕獲報告</span>
+              <span class="text-slate-500 mono">2026-10-28 03:45</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              東側ブロック地下にて不審者（自称フク）を拘束。B3収容室へ移送済み。脱出の可能性はゼロである。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: メモ (MEMO) -->
+      <div id="tab-content-memo" class="hidden space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 端末内部ローカルメモ
+            </h3>
+            <p class="text-xs text-slate-400">オフライン状態でも書き込むことができます</p>
+          </div>
+          <div id="memo-save-status" class="text-[11px] text-slate-500 mono">
+            AUTO-SAVED
+          </div>
+        </div>
+
+        <div class="relative">
+          <textarea id="memo-textarea" rows="12" oninput="handleMemoInput(this.value)" placeholder="メモを入力..." class="w-full p-4 rounded-xl glass-panel text-slate-100 text-sm leading-relaxed focus:outline-none focus:border-cyan-400 resize-none mono"></textarea>
+          
+          <!-- 入力ロック演出オーバーレイ -->
+          <div id="memo-typing-overlay" class="hidden absolute inset-0 bg-black/40 rounded-xl backdrop-blur-[1px] flex items-center justify-center pointer-events-auto">
+            <div class="px-4 py-2 rounded-xl bg-slate-900 border border-cyan-400/50 text-cyan-300 text-xs font-mono flex items-center gap-2 shadow-2xl animate-pulse">
+              <span class="w-2 h-2 bg-cyan-400 rounded-full animate-ping"></span>
+              REMOTELY TYPING... 書き込みロック中
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="mt-8 border-t border-slate-900 pt-4 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-600 mono gap-2">
+      <div>DIMENSION PROTOCOL // ARG EXPERIMENTAL TERMINAL</div>
+      <div>ENCRYPTED CONNECTION</div>
+    </footer>
+  </div>
+
+  <!-- ==================== EXAM MODAL / GAME ARENA ==================== -->
+  <div id="exam-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-panel w-full max-w-lg rounded-2xl p-6 border-cyan-500/40 relative max-h-[90vh] overflow-y-auto">
+      <button onclick="closeExamModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg mono">
+        &times;
+      </button>
+
+      <div class="mb-4">
+        <span id="modal-exam-type-badge" class="px-2 py-0.5 text-[10px] font-bold rounded uppercase mono"></span>
+        <h3 id="modal-exam-title" class="text-xl font-bold text-white mt-1"></h3>
+      </div>
+
+      <!-- RULES STAGE -->
+      <div id="modal-rules-stage" class="space-y-4">
+        <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed" id="modal-exam-rules">
+          <!-- Rule text inserted here -->
+        </div>
+        <button onclick="startActiveExamGame()" class="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-bold rounded-xl tracking-wider text-sm transition-all shadow-lg shadow-cyan-500/20">
+          スタート
+        </button>
+      </div>
+
+      <!-- GAME PLAY STAGE -->
+      <div id="modal-game-stage" class="hidden space-y-4 mt-2">
+        <div id="game-arena-content">
+          <!-- Interactive mini-game generated dynamically -->
+        </div>
+      </div>
+
+      <!-- CLEAR STAGE -->
+      <div id="modal-clear-stage" class="hidden space-y-4 text-center py-6">
+        <div class="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-400 animate-bounce">
+          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+        </div>
+        <h4 class="text-2xl font-bold text-white cyber-glow">試験クリア！</h4>
+        <p class="text-xs text-slate-300" id="clear-congrats-text">規定の適性を実証しました。</p>
+        <button onclick="closeExamModal()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl tracking-wider text-xs transition-all">
+          試験リストに戻る
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== POPUP: チャットが来ました ==================== -->
+  <div id="chat-popup" class="hidden fixed bottom-6 right-6 z-50 max-w-sm w-full p-4 rounded-2xl bg-slate-900 border border-cyan-400 shadow-2xl shadow-cyan-500/30 flex items-start gap-3 animate-bounce">
+    <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-300 shrink-0">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+    </div>
+    <div class="flex-1">
+      <div class="flex items-center justify-between">
+        <h5 class="text-xs font-bold text-cyan-400 mono">NEW TRANSMISSION</h5>
+        <button onclick="document.getElementById('chat-popup').classList.add('hidden')" class="text-slate-500 hover:text-white text-xs">&times;</button>
+      </div>
+      <p class="text-xs font-bold text-white mt-1">チャットが来ました！</p>
+      <p class="text-[11px] text-slate-400 mt-0.5">フク: 「牢屋から脱出できたっす！感謝するっす…！」</p>
+    </div>
+  </div>
+
+  <script>
+    /* ========================================================================
+       STATE MANAGEMENT & AUDIO SYNTHESIZER
+       ======================================================================== */
+    const STATE = {
+      currentUser: null, // null | 'normal' | 'executive'
+      clearedExams: new Set(),
+      activeExamId: null,
+      hibiyaAppliedNormal: false,
+      fukuEscapeTriggered: false,
+      isFukuTyping: false,
+      executiveMemoInitialSet: false
+    };
+
+    // Synthesized Sound Effects (No external URLs needed)
+    const AudioEngine = {
+      ctx: null,
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (AudioContext) this.ctx = new AudioContext();
+        }
+      },
+      playBeep(freq = 440, type = 'sine', duration = 0.1) {
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {
+          // Audio autoplay safe catch
+        }
+      },
+      playSuccess() {
+        this.playBeep(523.25, 'triangle', 0.12);
+        setTimeout(() => this.playBeep(659.25, 'triangle', 0.12), 100);
+        setTimeout(() => this.playBeep(783.99, 'triangle', 0.25), 200);
+      },
+      playAlert() {
+        this.playBeep(880, 'square', 0.15);
+        setTimeout(() => this.playBeep(440, 'square', 0.2), 150);
+      }
+    };
+
+    /* ========================================================================
+       EXAMS DEFINITIONS & MINI-GAMES (2 Mandatory, 4 Optional)
+       ======================================================================== */
+    const EXAMS_DATA = [
+      // 必須 1: 論理暗号解読
+      {
+        id: 'mandatory-cipher',
+        mandatory: true,
+        title: '必須第1試験: 論理暗号解読',
+        category: '暗号解析適性',
+        rules: '表示された法則からアルファベットのシフト暗号を解読してください。\n「D I M E」を+1シフトした英単語【E J N F】のように、指定された単語を暗号化してください。',
+        setupGame(container) {
+          const words = [
+            { raw: 'GATE', shift: 1, ans: 'HBUF' },
+            { raw: 'HACK', shift: 1, ans: 'IBDL' },
+            { raw: 'CORE', shift: 2, ans: 'EQTG' }
+          ];
+          const target = words[Math.floor(Math.random() * words.length)];
+          container.innerHTML = `
+            <div class="text-center space-y-4">
+              <div class="p-3 bg-slate-900 border border-slate-700 rounded-xl">
+                <span class="text-xs text-slate-400">変換対象コード:</span>
+                <div class="text-2xl font-bold text-cyan-400 tracking-widest mono mt-1">${target.raw}</div>
+                <div class="text-[11px] text-amber-300 mt-1 mono">RULE: 各アルファベットを [ +${target.shift} ] 文字シフトせよ</div>
+              </div>
+              <input type="text" id="cipher-input" placeholder="回答を入力 (英大文字)" class="w-full text-center px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono uppercase text-lg focus:outline-none focus:border-cyan-400">
+              <button onclick="checkCipherAns('${target.ans}')" class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-xl">
+                送信して判定
+              </button>
+              <div id="cipher-feedback" class="text-xs text-rose-400 hidden"></div>
+            </div>
+          `;
+        }
+      },
+      // 必須 2: 反射神経同期試験
+      {
+        id: 'mandatory-reaction',
+        mandatory: true,
+        title: '必須第2試験: 反射神経同期試験',
+        category: '神経速度適性',
+        rules: '合図とともに枠が【青緑（シアン）】に変化した瞬間に素早くボタンを押してください。早すぎると失格です。',
+        setupGame(container) {
+          container.innerHTML = `
+            <div class="text-center space-y-4">
+              <div id="reaction-box" class="h-32 rounded-2xl border-2 border-slate-700 bg-slate-950 flex flex-col items-center justify-center transition-colors">
+                <span id="reaction-text" class="text-sm text-slate-400 mono">待機中... 変化を待て</span>
+              </div>
+              <button id="reaction-btn" onclick="handleReactionClick()" class="w-full py-3 bg-slate-800 text-slate-300 font-bold text-xs rounded-xl mono">
+                TAP / CLICK
+              </button>
+            </div>
+          `;
+          window._reactionState = 'waiting';
+          const delay = 1500 + Math.random() * 2000;
+          window._reactionTimer = setTimeout(() => {
+            const box = document.getElementById('reaction-box');
+            const txt = document.getElementById('reaction-text');
+            const btn = document.getElementById('reaction-btn');
+            if (!box) return;
+            box.classList.replace('bg-slate-950', 'bg-cyan-500');
+            box.classList.replace('border-slate-700', 'border-cyan-300');
+            txt.innerText = '今だ！押せ！';
+            txt.classList.replace('text-slate-400', 'text-black');
+            txt.classList.add('font-bold');
+            btn.classList.replace('bg-slate-800', 'bg-cyan-400');
+            btn.classList.replace('text-slate-300', 'text-black');
+            window._reactionState = 'active';
+            window._reactionStart = Date.now();
+          }, delay);
+        }
+      },
+      // 任意 1: パターン記憶試験
+      {
+        id: 'opt-memory',
+        mandatory: false,
+        title: '任意第1試験: パターン記憶試験',
+        category: '短期記憶適性',
+        rules: '光るタイルの順番（4ステップ）を記憶し、同じ順番でタップしてください。',
+        setupGame(container) {
+          container.innerHTML = `
+            <div class="text-center space-y-3">
+              <div class="text-xs text-slate-400" id="simon-status">シーケンス表示中...</div>
+              <div class="grid grid-cols-2 gap-3 max-w-[220px] mx-auto" id="simon-grid">
+                <button onclick="pressSimon(0)" id="pad-0" class="h-20 rounded-xl bg-slate-800 border border-slate-700 active:scale-95 transition-all"></button>
+                <button onclick="pressSimon(1)" id="pad-1" class="h-20 rounded-xl bg-slate-800 border border-slate-700 active:scale-95 transition-all"></button>
+                <button onclick="pressSimon(2)" id="pad-2" class="h-20 rounded-xl bg-slate-800 border border-slate-700 active:scale-95 transition-all"></button>
+                <button onclick="pressSimon(3)" id="pad-3" class="h-20 rounded-xl bg-slate-800 border border-slate-700 active:scale-95 transition-all"></button>
+              </div>
+            </div>
+          `;
+          window._simonSequence = [0, 1, 3, 2];
+          window._simonInput = [];
+          window._simonAllowed = false;
+          playSimonSequence();
+        }
+      },
+      // 任意 2: 周波数同調試験
+      {
+        id: 'opt-frequency',
+        mandatory: false,
+        title: '任意第2試験: 周波数同調試験',
+        category: '波動解析適性',
+        rules: 'スライダーを左右に調整し、ターゲットの周波数【 73.5 MHz 】にピッタリ合わせてロックしてください。',
+        setupGame(container) {
+          container.innerHTML = `
+            <div class="text-center space-y-4">
+              <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl">
+                <span class="text-xs text-slate-500">TARGET: 73.5 MHz</span>
+                <div class="text-3xl font-mono font-bold text-cyan-400 mt-1" id="current-freq-display">50.0 MHz</div>
+              </div>
+              <input type="range" min="40" max="100" step="0.5" value="50" oninput="updateFreq(this.value)" class="w-full accent-cyan-400 cursor-pointer">
+              <button onclick="checkFreq()" class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-xl">
+                周波数ロック
+              </button>
+              <div id="freq-feedback" class="text-xs text-rose-400 hidden"></div>
+            </div>
+          `;
+          window._currentFreq = 50.0;
+        }
+      },
+      // 任意 3: セキュリティパズル
+      {
+        id: 'opt-matrix',
+        mandatory: false,
+        title: '任意第3試験: セキュリティパズル',
+        category: '論理演算適性',
+        rules: '足すとちょうど【 15 】になる3つの数値をマトリクスから選んで同期を完了させてください。',
+        setupGame(container) {
+          const numbers = [2, 4, 5, 6, 8, 9];
+          container.innerHTML = `
+            <div class="text-center space-y-3">
+              <div class="text-xs text-slate-400">現在選択の合計: <span id="matrix-sum" class="font-bold text-cyan-300 mono text-sm">0</span> / 15</div>
+              <div class="grid grid-cols-3 gap-2 max-w-xs mx-auto" id="matrix-grid">
+                ${numbers.map((n) => `
+                  <button onclick="toggleMatrixNum(${n}, this)" class="matrix-btn py-3 rounded-xl bg-slate-900 border border-slate-700 font-mono text-base font-bold text-white hover:border-cyan-400">
+                    ${n}
+                  </button>
+                `).join('')}
+              </div>
+              <button onclick="checkMatrixAns()" class="w-full py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-xl mt-2">
+                検証する
+              </button>
+              <div id="matrix-feedback" class="text-xs text-rose-400 hidden"></div>
+            </div>
+          `;
+          window._matrixSelected = [];
+        }
+      },
+      // 任意 4: 心理適性テスト
+      {
+        id: 'opt-psychology',
+        mandatory: false,
+        title: '任意第4試験: 心理適性テスト',
+        category: '思考整合適性',
+        rules: '「ディメンション」の理念に基づき、最も適格な行動方針を一つ選んでください。',
+        setupGame(container) {
+          container.innerHTML = `
+            <div class="space-y-2">
+              <button onclick="answerPsych(true)" class="w-full text-left p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-cyan-400 text-xs text-slate-200 transition-colors">
+                A: 全ての任務において、個人の感情よりも計画の完遂を最優先する
+              </button>
+              <button onclick="answerPsych(false)" class="w-full text-left p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-400 text-xs text-slate-200 transition-colors">
+                B: 危険を感じたら即座に作戦を放棄し警察に通報する
+              </button>
+              <button onclick="answerPsych(false)" class="w-full text-left p-3 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-400 text-xs text-slate-200 transition-colors">
+                C: 都市伝説など信用せず、独自の利益のみを追求する
+              </button>
+            </div>
+          `;
+        }
+      }
+    ];
+
+    /* ========================================================================
+       EXAMS LOGIC & RENDERING
+       ======================================================================== */
+    function renderExamsList() {
+      const mandContainer = document.getElementById('mandatory-exams-container');
+      const optContainer = document.getElementById('optional-exams-container');
+      mandContainer.innerHTML = '';
+      optContainer.innerHTML = '';
+
+      EXAMS_DATA.forEach(exam => {
+        const isCleared = STATE.clearedExams.has(exam.id);
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border transition-all ${
+          isCleared 
+            ? 'border-emerald-500/60 bg-emerald-950/20' 
+            : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <span class="text-[10px] mono ${exam.mandatory ? 'text-rose-400' : 'text-blue-400'} font-bold">
+                [${exam.category}]
+              </span>
+              <h4 class="text-sm font-bold text-white mt-0.5">${exam.title}</h4>
+            </div>
+            ${isCleared ? `
+              <span class="px-2 py-0.5 bg-emerald-500/20 border border-emerald-400 text-emerald-300 text-[10px] font-mono font-bold rounded">
+                CLEAR
+              </span>
+            ` : `
+              <span class="px-2 py-0.5 bg-slate-800 text-slate-400 text-[10px] font-mono rounded">
+                PENDING
+              </span>
+            `}
+          </div>
+          <button onclick="openExamModal('${exam.id}')" class="w-full mt-2 py-2 rounded-lg text-xs font-semibold tracking-wider transition-all ${
+            isCleared 
+              ? 'bg-slate-800 hover:bg-slate-700 text-slate-300' 
+              : 'bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+          }">
+            ${isCleared ? '再挑戦 / 確認' : '試験を開始する'}
+          </button>
+        `;
+
+        if (exam.mandatory) {
+          mandContainer.appendChild(card);
+        } else {
+          optContainer.appendChild(card);
+        }
+      });
+
+      document.getElementById('clear-count-display').innerText = STATE.clearedExams.size;
+      checkExamRequirements();
+    }
+
+    function checkExamRequirements() {
+      const mand1 = STATE.clearedExams.has('mandatory-cipher');
+      const mand2 = STATE.clearedExams.has('mandatory-reaction');
+      const optClearedCount = ['opt-memory', 'opt-frequency', 'opt-matrix', 'opt-psychology']
+        .filter(id => STATE.clearedExams.has(id)).length;
+
+      const passed = mand1 && mand2 && (optClearedCount >= 1);
+      const certArea = document.getElementById('pass-certificate-area');
+      if (passed) {
+        certArea.classList.remove('hidden');
+      } else {
+        certArea.classList.add('hidden');
+      }
+    }
+
+    function openExamModal(examId) {
+      AudioEngine.playBeep(600, 'sine', 0.05);
+      STATE.activeExamId = examId;
+      const exam = EXAMS_DATA.find(e => e.id === examId);
+      if (!exam) return;
+
+      document.getElementById('modal-exam-title').innerText = exam.title;
+      const typeBadge = document.getElementById('modal-exam-type-badge');
+      if (exam.mandatory) {
+        typeBadge.className = 'px-2 py-0.5 text-[10px] font-bold rounded uppercase mono bg-rose-500/20 text-rose-300 border border-rose-500/40';
+        typeBadge.innerText = '必須試験 (MANDATORY)';
+      } else {
+        typeBadge.className = 'px-2 py-0.5 text-[10px] font-bold rounded uppercase mono bg-blue-500/20 text-blue-300 border border-blue-500/40';
+        typeBadge.innerText = '任意試験 (OPTIONAL)';
+      }
+
+      document.getElementById('modal-exam-rules').innerText = exam.rules;
+      document.getElementById('modal-rules-stage').classList.remove('hidden');
+      document.getElementById('modal-game-stage').classList.add('hidden');
+      document.getElementById('modal-clear-stage').classList.add('hidden');
+      document.getElementById('exam-modal').classList.remove('hidden');
+    }
+
+    function startActiveExamGame() {
+      AudioEngine.playBeep(750, 'sine', 0.08);
+      document.getElementById('modal-rules-stage').classList.add('hidden');
+      const gameStage = document.getElementById('modal-game-stage');
+      gameStage.classList.remove('hidden');
+      const arena = document.getElementById('game-arena-content');
+      arena.innerHTML = '';
+
+      const exam = EXAMS_DATA.find(e => e.id === STATE.activeExamId);
+      if (exam && exam.setupGame) {
+        exam.setupGame(arena);
+      }
+    }
+
+    function completeActiveExam() {
+      AudioEngine.playSuccess();
+      STATE.clearedExams.add(STATE.activeExamId);
+      document.getElementById('modal-game-stage').classList.add('hidden');
+      document.getElementById('modal-clear-stage').classList.remove('hidden');
+      renderExamsList();
+    }
+
+    function closeExamModal() {
+      if (window._reactionTimer) clearTimeout(window._reactionTimer);
+      document.getElementById('exam-modal').classList.add('hidden');
+    }
+
+    /* --- Mini-game Handlers --- */
+    function checkCipherAns(targetAns) {
+      const input = document.getElementById('cipher-input').value.trim().toUpperCase();
+      const fb = document.getElementById('cipher-feedback');
+      if (input === targetAns) {
+        completeActiveExam();
+      } else {
+        AudioEngine.playAlert();
+        fb.classList.remove('hidden');
+        fb.innerText = '暗号不一致。シフト規則を再計算してください。';
+      }
+    }
+
+    function handleReactionClick() {
+      if (window._reactionState === 'waiting') {
+        clearTimeout(window._reactionTimer);
+        AudioEngine.playAlert();
+        const box = document.getElementById('reaction-box');
+        const txt = document.getElementById('reaction-text');
+        box.classList.add('border-rose-500', 'bg-rose-950/40');
+        txt.innerText = '失格！フライングです。やり直してください。';
+        setTimeout(() => startActiveExamGame(), 1000);
+      } else if (window._reactionState === 'active') {
+        completeActiveExam();
+      }
+    }
+
+    function playSimonSequence() {
+      let step = 0;
+      const interval = setInterval(() => {
+        if (step >= window._simonSequence.length) {
+          clearInterval(interval);
+          document.getElementById('simon-status').innerText = '順番に入力してください！';
+          window._simonAllowed = true;
+          return;
+        }
+        const padIdx = window._simonSequence[step];
+        const pad = document.getElementById(`pad-${padIdx}`);
+        pad.classList.add('bg-cyan-400');
+        AudioEngine.playBeep(400 + padIdx * 100, 'sine', 0.15);
+        setTimeout(() => pad.classList.remove('bg-cyan-400'), 300);
+        step++;
+      }, 600);
+    }
+
+    function pressSimon(idx) {
+      if (!window._simonAllowed) return;
+      AudioEngine.playBeep(400 + idx * 100, 'sine', 0.1);
+      const pad = document.getElementById(`pad-${idx}`);
+      pad.classList.add('bg-cyan-300');
+      setTimeout(() => pad.classList.remove('bg-cyan-300'), 200);
+
+      window._simonInput.push(idx);
+      const currentStep = window._simonInput.length - 1;
+
+      if (window._simonInput[currentStep] !== window._simonSequence[currentStep]) {
+        AudioEngine.playAlert();
+        document.getElementById('simon-status').innerText = '失敗！シーケンスを再再生します...';
+        window._simonAllowed = false;
+        window._simonInput = [];
+        setTimeout(playSimonSequence, 1200);
+        return;
+      }
+
+      if (window._simonInput.length === window._simonSequence.length) {
+        completeActiveExam();
+      }
+    }
+
+    function updateFreq(val) {
+      window._currentFreq = parseFloat(val);
+      document.getElementById('current-freq-display').innerText = `${window._currentFreq.toFixed(1)} MHz`;
+    }
+    function checkFreq() {
+      if (Math.abs(window._currentFreq - 73.5) < 0.1) {
+        completeActiveExam();
+      } else {
+        AudioEngine.playAlert();
+        const fb = document.getElementById('freq-feedback');
+        fb.classList.remove('hidden');
+        fb.innerText = '周波数が一致していません。波長を微調整してください。';
+      }
+    }
+
+    function toggleMatrixNum(num, btn) {
+      AudioEngine.playBeep(500, 'sine', 0.05);
+      const idx = window._matrixSelected.indexOf(num);
+      if (idx > -1) {
+        window._matrixSelected.splice(idx, 1);
+        btn.classList.remove('bg-cyan-500', 'text-black');
+      } else {
+        if (window._matrixSelected.length >= 3) return;
+        window._matrixSelected.push(num);
+        btn.classList.add('bg-cyan-500', 'text-black');
+      }
+      const sum = window._matrixSelected.reduce((a, b) => a + b, 0);
+      document.getElementById('matrix-sum').innerText = sum;
+    }
+    function checkMatrixAns() {
+      const sum = window._matrixSelected.reduce((a, b) => a + b, 0);
+      if (window._matrixSelected.length === 3 && sum === 15) {
+        completeActiveExam();
+      } else {
+        AudioEngine.playAlert();
+        const fb = document.getElementById('matrix-feedback');
+        fb.classList.remove('hidden');
+        fb.innerText = '合計が15になっていないか、選択数が3つではありません。';
+      }
+    }
+
+    function answerPsych(isCorrect) {
+      if (isCorrect) {
+        completeActiveExam();
+      } else {
+        AudioEngine.playAlert();
+        alert('不適格判定。ディメンションの理念を再考してください。');
+      }
+    }
+
+    /* ========================================================================
+       SCREEN NAVIGATION & LOGIN LOGIC
+       ======================================================================== */
+    function showScreen(screenId) {
+      AudioEngine.playBeep(480, 'sine', 0.05);
+      const screens = ['screen-top', 'screen-exam', 'screen-login', 'screen-portal'];
+      screens.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+      });
+      document.getElementById(screenId).classList.remove('hidden');
+
+      if (screenId === 'screen-exam') {
+        renderExamsList();
+      }
+    }
+
+    function autofillAndGoLogin(id, pass) {
+      showScreen('screen-login');
+      document.getElementById('input-id').value = id;
+      document.getElementById('input-pass').value = pass;
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const id = document.getElementById('input-id').value.trim();
+      const pass = document.getElementById('input-pass').value.trim();
+      const errBox = document.getElementById('login-error-msg');
+
+      // 幹部アカウント認証条件:
+      // ID: KANBU (または 幹部, DIM-ADMIN) / PASS: DIM-EXECUTIVE-88 (または EXECUTIVE-88)
+      const isExecutive = ((id.toUpperCase() === 'KANBU' || id === '幹部' || id.toUpperCase() === 'DIM-ADMIN') && 
+                          (pass === 'DIM-EXECUTIVE-88' || pass === 'EXECUTIVE-88'));
+
+      // 一般構成員認証条件:
+      // 試験クリアで取得できる ID: DIM-7749 / PASS: NEXUS-X
+      const isNormal = (id.toUpperCase() === 'DIM-7749' && pass.toUpperCase() === 'NEXUS-X');
+
+      if (isExecutive) {
+        errBox.classList.add('hidden');
+        STATE.currentUser = 'executive';
+        enterPortal();
+      } else if (isNormal) {
+        errBox.classList.add('hidden');
+        STATE.currentUser = 'normal';
+        enterPortal();
+      } else {
+        AudioEngine.playAlert();
+        errBox.classList.remove('hidden');
+      }
+    }
+
+    function enterPortal() {
+      AudioEngine.playSuccess();
+      showScreen('screen-portal');
+
+      const badge = document.getElementById('auth-status-badge');
+      const roleDisplayName = document.getElementById('role-display-name');
+      const roleBadge = document.getElementById('role-badge');
+      const userIdDisplay = document.getElementById('user-id-display');
+      const roleAvatar = document.getElementById('role-avatar');
+      const bbsLocked = document.getElementById('bbs-locked-view');
+      const bbsExec = document.getElementById('bbs-executive-view');
+      const memoArea = document.getElementById('memo-textarea');
+
+      if (STATE.currentUser === 'executive') {
+        badge.innerText = 'STATUS: EXECUTIVE_OVERRIDE';
+        badge.className = 'text-xs text-rose-400 mono border border-rose-800 px-2.5 py-1 rounded bg-rose-950/60 font-bold';
+        roleDisplayName.innerText = '最高幹部';
+        roleDisplayName.className = 'font-bold text-rose-400 text-sm red-glow';
+        roleBadge.innerText = 'LEVEL 5 [EXECUTIVE]';
+        roleBadge.className = 'text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-rose-950 text-rose-300 border border-rose-800';
+        userIdDisplay.innerText = 'ID: KANBU-CLEARANCE';
+        roleAvatar.innerText = 'EXEC';
+        roleAvatar.className = 'w-10 h-10 rounded-xl bg-rose-500/20 border border-rose-400 flex items-center justify-center font-bold text-rose-300 mono';
+
+        // 掲示板: 幹部用表示
+        bbsLocked.classList.add('hidden');
+        bbsExec.classList.remove('hidden');
+
+        // 幹部メモ初期テキスト設定
+        if (!STATE.executiveMemoInitialSet) {
+          const initMemo = `これ、誰か見てるっすか？俺はフクっす。\n今、ディメンションのアジトに潜入して色々探ってたんすけど、途中で捕まって今牢屋みたいなところにいるっす。\n\n牢屋のナンバーさえ分かれば脱出できるんすけど…。\n`;
+          memoArea.value = initMemo;
+          STATE.executiveMemoInitialSet = true;
+          localStorage.setItem('dim_executive_memo', initMemo);
+        } else {
+          memoArea.value = localStorage.getItem('dim_executive_memo') || '';
+        }
+
+      } else {
+        badge.innerText = 'STATUS: AUTHORIZED_MEMBER';
+        badge.className = 'text-xs text-cyan-400 mono border border-cyan-800 px-2.5 py-1 rounded bg-cyan-950/60';
+        roleDisplayName.innerText = '一般構成員';
+        roleDisplayName.className = 'font-bold text-white text-sm';
+        roleBadge.innerText = 'LEVEL 1';
+        roleBadge.className = 'text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800';
+        userIdDisplay.innerText = 'ID: DIM-7749';
+        roleAvatar.innerText = 'UID';
+        roleAvatar.className = 'w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400 flex items-center justify-center font-bold text-cyan-300 mono';
+
+        // 掲示板: ロック表示
+        bbsLocked.classList.remove('hidden');
+        bbsExec.classList.add('hidden');
+
+        // 一般メモ読み込み
+        memoArea.value = localStorage.getItem('dim_normal_memo') || '';
+      }
+
+      renderJobsUI();
+      switchTab('jobs');
+    }
+
+    function renderJobsUI() {
+      const slots = document.getElementById('hibiya-slots-badge');
+      const actionArea = document.getElementById('hibiya-action-area');
+      const directiveBox = document.getElementById('hibiya-result-directive');
+
+      if (STATE.currentUser === 'executive') {
+        slots.innerText = '残り0名';
+        slots.className = 'text-sm font-bold mono text-slate-500';
+        actionArea.innerHTML = `
+          <button disabled class="px-5 py-2.5 bg-slate-800 text-slate-500 font-bold text-xs rounded-xl cursor-not-allowed border border-slate-700">
+            募集終了 (残り0名)
+          </button>
+        `;
+        directiveBox.classList.add('hidden');
+      } else {
+        if (STATE.hibiyaAppliedNormal) {
+          slots.innerText = '残り0名 (応募済)';
+          slots.className = 'text-sm font-bold mono text-emerald-400';
+          actionArea.innerHTML = `
+            <button disabled class="px-5 py-2.5 bg-slate-800 border border-emerald-500/40 text-emerald-300 font-bold text-xs rounded-xl cursor-default">
+              ✓ 応募しました
+            </button>
+          `;
+          directiveBox.classList.remove('hidden');
+        } else {
+          slots.innerText = '残り1名';
+          slots.className = 'text-sm font-bold mono text-amber-400';
+          actionArea.innerHTML = `
+            <button onclick="applyHibiyaJob()" class="px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded-xl tracking-wider shadow-md transition-all">
+              応募する
+            </button>
+          `;
+          directiveBox.classList.add('hidden');
+        }
+      }
+    }
+
+    function handleLogout() {
+      AudioEngine.playBeep(400, 'sine', 0.1);
+      STATE.currentUser = null;
+      document.getElementById('auth-status-badge').innerText = 'STATUS: GUEST_MODE';
+      document.getElementById('auth-status-badge').className = 'text-xs text-slate-500 mono border border-slate-800 px-2.5 py-1 rounded bg-slate-950/60';
+      showScreen('screen-top');
+    }
+
+    function switchTab(tabName) {
+      AudioEngine.playBeep(520, 'sine', 0.04);
+      ['jobs', 'bbs', 'memo'].forEach(t => {
+        document.getElementById(`tab-content-${t}`).classList.add('hidden');
+        document.getElementById(`tab-btn-${t}`).classList.remove('bg-cyan-500/20', 'text-cyan-300', 'border', 'border-cyan-500/40');
+        document.getElementById(`tab-btn-${t}`).classList.add('text-slate-400', 'hover:text-slate-200');
+      });
+
+      const activeContent = document.getElementById(`tab-content-${tabName}`);
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      activeContent.classList.remove('hidden');
+      activeBtn.classList.remove('text-slate-400', 'hover:text-slate-200');
+      activeBtn.classList.add('bg-cyan-500/20', 'text-cyan-300', 'border', 'border-cyan-500/40');
+    }
+
+    function applyHibiyaJob() {
+      if (STATE.hibiyaAppliedNormal || STATE.currentUser === 'executive') return;
+      AudioEngine.playSuccess();
+      STATE.hibiyaAppliedNormal = true;
+      renderJobsUI();
+    }
+
+    /* ========================================================================
+       MEMO LOGIC & 幹部「フク」脱出ギミック
+       ======================================================================== */
+    function handleMemoInput(val) {
+      if (STATE.isFukuTyping) return;
+
+      const storageKey = STATE.currentUser === 'executive' ? 'dim_executive_memo' : 'dim_normal_memo';
+      localStorage.setItem(storageKey, val);
+
+      const statusEl = document.getElementById('memo-save-status');
+      statusEl.innerText = 'SAVED';
+      setTimeout(() => { statusEl.innerText = 'AUTO-SAVED'; }, 1000);
+
+      if (STATE.currentUser === 'executive' && !STATE.fukuEscapeTriggered && !STATE.isFukuTyping) {
+        const pattern = /(3918|３９１８|三九一八)/;
+        if (pattern.test(val)) {
+          triggerFukuEscapeSequence();
+        }
+      }
+    }
+
+    function triggerFukuEscapeSequence() {
+      STATE.fukuEscapeTriggered = true;
+      STATE.isFukuTyping = true;
+
+      const textarea = document.getElementById('memo-textarea');
+      const overlay = document.getElementById('memo-typing-overlay');
+
+      textarea.readOnly = true;
+      overlay.classList.remove('hidden');
+      AudioEngine.playAlert();
+
+      const baseText = textarea.value.trimEnd();
+      const responseLines = [
+        "",
+        "「それがナンバー…？",
+        "おっ、3918で牢屋から出ることができたっす！",
+        "今から他のみんなと合流するっす」"
+      ].join("\n");
+
+      let charIndex = 0;
+      textarea.value = baseText + "\n";
+
+      const typeSpeed = 50;
+
+      const typeTimer = setInterval(() => {
+        if (charIndex < responseLines.length) {
+          textarea.value += responseLines.charAt(charIndex);
+          textarea.scrollTop = textarea.scrollHeight;
+          if (charIndex % 3 === 0) {
+            AudioEngine.playBeep(650 + Math.random() * 150, 'sine', 0.02);
+          }
+          charIndex++;
+        } else {
+          clearInterval(typeTimer);
+          STATE.isFukuTyping = false;
+          textarea.readOnly = false;
+          overlay.classList.add('hidden');
+          localStorage.setItem('dim_executive_memo', textarea.value);
+
+          AudioEngine.playSuccess();
+          const chatPopup = document.getElementById('chat-popup');
+          chatPopup.classList.remove('hidden');
+          document.getElementById('memo-alert-dot').classList.remove('hidden');
+        }
+      }, typeSpeed);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      renderExamsList();
+    });
+  </script>
+</body>
+</html>
