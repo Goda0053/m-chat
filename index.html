@@ -307,7 +307,6 @@
 
     let autoReplies = [];
     let isProcessing = false;
-    let hasActiveOptions = false;
 
     function parseImageUrls(rawStr) {
       if (!rawStr) return [];
@@ -338,6 +337,7 @@
       }
     }
 
+    // 選択肢(options)の有無に関わらず、文字入力を常に可能にする
     function updateInputState() {
       const input = document.getElementById('chat-input');
       const sendBtn = document.getElementById('send-btn');
@@ -348,12 +348,6 @@
         sendBtn.disabled = true;
         attachLabel.classList.add('disabled');
         input.placeholder = "通信処理中...";
-      } else if (hasActiveOptions) {
-        input.disabled = true;
-        sendBtn.disabled = true;
-        attachLabel.classList.add('disabled');
-        input.value = "";
-        input.placeholder = "選択肢から選択してください";
       } else {
         input.disabled = false;
         sendBtn.disabled = false;
@@ -457,7 +451,7 @@
       for (const rule of autoReplies) {
         if (rule.trigger) {
           const triggerList = rule.trigger.split(/[,、]/).map(t => normalizeStr(t)).filter(t => t.length > 0);
-          // 完全一致（===）で比較
+          // 完全一致判定
           const isMatched = triggerList.some(singleTrigger => normInput === singleTrigger);
           if (isMatched) {
             matchedRule = rule;
@@ -514,7 +508,7 @@
     }
 
     function handleUserImage(e) {
-      if (isProcessing || hasActiveOptions) return;
+      if (isProcessing) return;
       const file = e.target.files[0];
       if (!file) return;
 
@@ -596,9 +590,6 @@
         return;
       }
 
-      hasActiveOptions = true;
-      updateInputState();
-
       opts.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
@@ -613,7 +604,6 @@
 
     function clearOptions() {
       document.getElementById('options-bar').innerHTML = '';
-      hasActiveOptions = false;
       updateInputState();
     }
 
