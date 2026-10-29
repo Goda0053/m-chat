@@ -457,7 +457,8 @@
       for (const rule of autoReplies) {
         if (rule.trigger) {
           const triggerList = rule.trigger.split(/[,、]/).map(t => normalizeStr(t)).filter(t => t.length > 0);
-          const isMatched = triggerList.some(singleTrigger => normInput.includes(singleTrigger));
+          // 完全一致（===）で比較
+          const isMatched = triggerList.some(singleTrigger => normInput === singleTrigger);
           if (isMatched) {
             matchedRule = rule;
             break;
@@ -471,7 +472,6 @@
 
         const typingEl = showTypingIndicator(matchedRule.author, matchedRule.avatar);
 
-        // 返信待ち時間を1秒（1000ms）に変更
         setTimeout(async () => {
           if (typingEl && typingEl.parentNode) {
             typingEl.parentNode.removeChild(typingEl);
